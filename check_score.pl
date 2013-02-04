@@ -41,24 +41,21 @@ my $threshold = Nagios::Plugin::Threshold->set_thresholds(
 
 alarm $options->timeout;
 
-my $url = sprintf("http://www.pool.ntp.org/scores/%s/json?monitor=*&limit=1",
+my $url = sprintf("http://www.pool.ntp.org/scores/%s/json?limit=1",
                   $options->ip);
 my $json = get($url);
 
 $plugin->nagios_die("Unable to load monitoring data: $!") unless defined $json;
 
 my $result = decode_json($json);
-my $code = OK;
 
-foreach my $monitor (@{$result->{'monitors'}}) {
-  $code = $code || $threshold->get_status($monitor->{'score'});
+my $code = $threshold->get_status($result->{'history'}->[0]->{'score'});
 
-  $plugin->add_perfdata(
-    label => "Station " . $monitor->{'name'},
-    value => $monitor->{'score'},
-    uom => "",
-    threshold => $threshold
-  );
-}
+$plugin->add_perfdata(
+  label => "score",
+  value => $result->{'history'}->[0]->{'score'},
+  uom => "",
+  threshold => $threshold
+);
 
 $plugin->nagios_exit($code, "");
